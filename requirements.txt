@@ -1,0 +1,10 @@
+# requirements.txt
+
+# Project dependencies. Install with:
+#   pip install -r requirements.txt
+
+# MongoDB driver (SRV extras brings dnspython dependency)
+pymongo[srv]==3.12
+
+# Load environment variables from a .env file (optional)
+python-dotenv>=0.21.0
