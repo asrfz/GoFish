@@ -45,8 +45,8 @@ CLIP_MODEL_NAME = "clip-ViT-B-32"
 EMBEDDING_DIMENSIONS = 512
 REFERENCE_COLLECTION = "fish_reference"
 CATCHES_COLLECTION = "catches"
-MODEL_PATH = "fish-scan/models/fish_classifier.pth"
-LABEL_ENCODER_PATH = "fish-scan/models/label_encoder.pkl"
+MODEL_PATH = Path(__file__).parent / "fish-scan" / "models" / "fish_classifier.pth"
+LABEL_ENCODER_PATH = Path(__file__).parent / "fish-scan" / "models" / "label_encoder.pkl"
 
 # Fishing Spots Config
 GEOJSON_PATH = Path(__file__).parent / "backend" / "fish_hab_type_wgs84_scored.geojson"
@@ -202,7 +202,7 @@ async def lifespan(app: FastAPI):
     # Load PyTorch model
     print("\n📦 Loading PyTorch Fish Classifier...")
     try:
-        if os.path.exists(MODEL_PATH):
+        if MODEL_PATH.exists():
             with open(LABEL_ENCODER_PATH, 'rb') as f:
                 label_encoder = pickle.load(f)
             
@@ -217,7 +217,7 @@ async def lifespan(app: FastAPI):
             print(f"✅ PyTorch model loaded!")
             print(f"   Classes: {num_classes}, Accuracy: {checkpoint.get('val_acc', 'N/A'):.2f}%")
         else:
-            print(f"⚠️ Model not found at {MODEL_PATH}")
+            print(f"⚠️ Model not found at {MODEL_PATH} (PyTorch classification will be disabled)")
     except Exception as e:
         print(f"⚠️ PyTorch model loading failed: {e}")
     
