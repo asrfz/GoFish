@@ -4,7 +4,22 @@
 #   pip install -r requirements.txt
 
 # MongoDB driver (SRV extras brings dnspython dependency)
-pymongo[srv]==3.12
+pymongo[srv]>=4.0.0
+motor>=3.3.0
+
+# Web framework
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# AI/ML dependencies
+sentence-transformers>=2.2.0  # For vector embeddings
+torch>=2.0.0
+torchvision>=0.15.0  # For ResNet and image transforms
+pillow>=9.0.0
+scikit-learn>=1.0.0  # For LabelEncoder
 
 # Load environment variables from a .env file (optional)
 python-dotenv>=0.21.0
+
+# Data validation
+pydantic>=2.0.0
