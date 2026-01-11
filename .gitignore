@@ -1,11 +1,24 @@
+# Environment variables
 .env
-__pycache__/
-node_modules/
-.next/
-*.log
-.DS_Store
+.env.local
+
+# Python
+/venv
+/__pycache__
+*.pyc
+*.pyo
+*.egg-info/
 dist/
 build/
+
+# Node
+/fish-scan/node_modules
+/dist
+
+# IDE
 .vscode/
 .idea/
-*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
