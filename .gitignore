@@ -12,8 +12,8 @@ dist/
 build/
 
 # Node
-/node_modules
-/dist
+/fish-scan/node_modules
+/fish-scan/dist
 
 # IDE
 .vscode/
