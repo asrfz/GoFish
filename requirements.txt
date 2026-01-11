@@ -1,25 +1,20 @@
-# requirements.txt
-
-# Project dependencies. Install with:
-#   pip install -r requirements.txt
-
-# MongoDB driver (SRV extras brings dnspython dependency)
-pymongo[srv]>=4.0.0
-motor>=3.3.0
+# requirements.txt - GoFish Moorcheh Brain
 
 # Web framework
 fastapi>=0.100.0
-uvicorn>=0.23.0
+uvicorn[standard]>=0.23.0
 
-# AI/ML dependencies
-sentence-transformers>=2.2.0  # For vector embeddings
-torch>=2.0.0
-torchvision>=0.15.0  # For ResNet and image transforms
-pillow>=9.0.0
-scikit-learn>=1.0.0  # For LabelEncoder
-
-# Load environment variables from a .env file (optional)
+# Environment variables
 python-dotenv>=0.21.0
+
+# HTTP client for Moorcheh API
+requests>=2.31.0
 
 # Data validation
 pydantic>=2.0.0
+
+# Template rendering
+jinja2>=3.1.0
+
+# File upload support
+python-multipart>=0.0.6
