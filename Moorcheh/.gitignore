@@ -1,0 +1,24 @@
+# Environment variables
+.env
+.env.local
+
+# Python
+/venv
+/__pycache__
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Node
+/fish-scan/node_modules
+/fish-scan/dist
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
