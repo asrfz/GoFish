@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ontario Angler Pro | Real-Time Fishing Forecasts",
-  description: "Live bite scores, river conditions, and strategic fishing advice for Ontario anglers.",
+  title: "GoFish | Fisherman Social Media",
+  description: "Fish scanner, best spots finder, and AI analytics for anglers.",
 };
 
 export default function RootLayout({

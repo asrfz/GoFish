@@ -1,4 +1,0 @@
-Fish_Data/raw_images/*.jpg filter=lfs diff=lfs merge=lfs -text
-models/*.pth filter=lfs diff=lfs merge=lfs -text
-fish-scan/Fish_Data/raw_images/*.jpg filter=lfs diff=lfs merge=lfs -text
-fish-scan/models/*.pth filter=lfs diff=lfs merge=lfs -text

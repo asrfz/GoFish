@@ -1,2 +1,0 @@
-# Moorcheh client package
-

@@ -1,116 +1,232 @@
 "use client";
 
-import { useState } from "react";
-import { Camera, MapPin, Heart, Info } from "lucide-react";
-import FishScanner from "@/components/FishScanner";
-import FishingMap from "@/components/FishingMap";
-import SafetyGuide from "@/components/SafetyGuide";
+import { useState, useEffect } from "react";
+import { Home, Camera, Brain, MapPin, Users, Plus } from "lucide-react";
+import FishScannerPost from "@/components/FishScannerPost";
+import BestSpotsPost from "@/components/BestSpotsPost";
+import MoorchehBrainPost from "@/components/MoorchehBrainPost";
+import ActiveUsersPost from "@/components/ActiveUsersPost";
+import FeedItem from "@/components/FeedItem";
+import CreatePost from "@/components/CreatePost";
 
-export default function Home() {
-  const [activeTab, setActiveTab] = useState<"scan" | "map" | "safety">("scan");
-  const [scannedFish, setScannedFish] = useState<any>(null);
+type Tab = "feed" | "scan" | "brain" | "spots" | "users";
+
+export default function HomePage() {
+  const [activeTab, setActiveTab] = useState<Tab>("feed");
+  const [feedItems, setFeedItems] = useState<any[]>([]);
+  const [scannedSpecies, setScannedSpecies] = useState<string | null>(null);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+
+  // Initialize feed with hardcoded posts and saved items
+  useEffect(() => {
+    const hardcodedPosts = [
+      {
+        id: Date.now() - 86400000, // 1 day ago
+        type: "post",
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        data: {
+          author: "FishingPro92",
+          authorAvatar: "🎣",
+          content: "Just caught my personal best bass at Lake Simcoe! 8.5 lbs and fighting strong. The bite was amazing this morning with the overcast weather. #GoFish #BassFishing #OntarioFishing",
+          image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop",
+          likes: 156,
+          comments: 23,
+        },
+      },
+      {
+        id: Date.now() - 43200000, // 12 hours ago
+        type: "post",
+        timestamp: new Date(Date.now() - 43200000).toISOString(),
+        data: {
+          author: "TroutMaster",
+          authorAvatar: "🐟",
+          content: "Spring trout season is heating up! Found this beautiful 22-inch rainbow using a fly rod. Nothing beats the early morning hatch. Tight lines everyone! 🎣",
+          image: "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?w=800&h=600&fit=crop",
+          likes: 203,
+          comments: 34,
+        },
+      },
+      {
+        id: Date.now() - 21600000, // 6 hours ago
+        type: "post",
+        timestamp: new Date(Date.now() - 21600000).toISOString(),
+        data: {
+          author: "WalleyeWizard",
+          authorAvatar: "🎣",
+          content: "Pro tip: Walleye are most active during low light conditions. Caught 5 keepers today just before sunset using jigs near structure. Always check your local regulations! #Walleye #FishingTips",
+          image: "https://images.unsplash.com/photo-1598295893369-1918ffaf89a2?w=800&h=600&fit=crop",
+          likes: 128,
+          comments: 18,
+        },
+      },
+    ];
+
+    // Load saved items from localStorage
+    const savedItems = localStorage.getItem("gofish_feed");
+    const saved = savedItems ? JSON.parse(savedItems) : [];
+    
+    // Combine hardcoded posts with saved items, avoiding duplicates
+    const allItems = [...hardcodedPosts, ...saved].filter((item, index, self) =>
+      index === self.findIndex((t) => t.id === item.id)
+    );
+    
+    // Sort by timestamp (newest first)
+    allItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    setFeedItems(allItems);
+    localStorage.setItem("gofish_feed", JSON.stringify(allItems.slice(0, 50)));
+  }, []);
+
+  const saveToFeed = (item: any) => {
+    // If item already has an id, use it; otherwise create one
+    const itemWithId = item.id ? item : { ...item, id: Date.now() };
+    const itemWithTimestamp = item.timestamp ? itemWithId : { ...itemWithId, timestamp: new Date().toISOString() };
+    
+    const newFeed = [itemWithTimestamp, ...feedItems];
+    // Remove duplicates and keep last 50 items
+    const uniqueFeed = newFeed.filter((item, index, self) =>
+      index === self.findIndex((t) => t.id === item.id)
+    );
+    const limitedFeed = uniqueFeed.slice(0, 50);
+    
+    setFeedItems(limitedFeed);
+    localStorage.setItem("gofish_feed", JSON.stringify(limitedFeed));
+    
+    // If it's a scan, set the species for Brain
+    if (itemWithTimestamp.type === "scan" && itemWithTimestamp.data?.species) {
+      setScannedSpecies(itemWithTimestamp.data.species);
+      // Auto-switch to brain tab after scan
+      setTimeout(() => setActiveTab("brain"), 500);
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-800">
-      {/* Header */}
-      <header className="bg-black bg-opacity-50 backdrop-blur-sm sticky top-0 z-40 border-b border-blue-400">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Instagram-style Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-300">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Heart className="w-8 h-8 text-red-500 fill-red-500" />
-            <h1 className="text-3xl font-bold text-white">GoFish</h1>
-            <span className="text-sm text-blue-300">v2.0</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">🐟</span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900">GoFish</h1>
           </div>
-          <p className="text-blue-200 text-sm">Fish scanning • Location finding • Safety guides</p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowCreatePost(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              title="Create Post"
+            >
+              <Plus className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <div className="bg-black bg-opacity-30 border-b border-blue-400">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-4">
-            <button
-              onClick={() => setActiveTab("scan")}
-              className={`px-6 py-4 font-semibold flex items-center gap-2 transition ${
-                activeTab === "scan"
-                  ? "text-white border-b-2 border-orange-400"
-                  : "text-blue-300 hover:text-white"
-              }`}
-            >
-              <Camera className="w-5 h-5" />
-              Fish Scanner
-            </button>
-            <button
-              onClick={() => setActiveTab("map")}
-              className={`px-6 py-4 font-semibold flex items-center gap-2 transition ${
-                activeTab === "map"
-                  ? "text-white border-b-2 border-orange-400"
-                  : "text-blue-300 hover:text-white"
-              }`}
-            >
-              <MapPin className="w-5 h-5" />
-              Fishing Spots
-            </button>
-            <button
-              onClick={() => setActiveTab("safety")}
-              className={`px-6 py-4 font-semibold flex items-center gap-2 transition ${
-                activeTab === "safety"
-                  ? "text-white border-b-2 border-orange-400"
-                  : "text-blue-300 hover:text-white"
-              }`}
-            >
-              <Info className="w-5 h-5" />
-              Safety & Recipes
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {activeTab === "scan" && (
-          <div>
-            <FishScanner onFishScanned={setScannedFish} />
-            {scannedFish && (
-              <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Scan Results</h2>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Identified Species</h3>
-                    <p className="text-4xl font-bold text-orange-600 mb-2">{scannedFish.species}</p>
-                    <p className="text-gray-600">
-                      Confidence: <span className="font-semibold">{(scannedFish.confidence * 100).toFixed(1)}%</span>
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">Method: {scannedFish.method}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Additional Info</h3>
-                    <ul className="space-y-2 text-gray-600 text-sm">
-                      <li>• PyTorch Model: {scannedFish.pytorch_confidence ? `${(scannedFish.pytorch_confidence * 100).toFixed(1)}%` : "N/A"}</li>
-                      <li>• Vector Search: {scannedFish.vector_confidence ? `${(scannedFish.vector_confidence * 100).toFixed(1)}%` : "N/A"}</li>
-                      <li>• Scanned with hybrid AI classification</li>
-                      <li>• Check recipes and safety info below</li>
-                    </ul>
-                  </div>
-                </div>
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto pb-20">
+        {activeTab === "feed" && (
+          <div className="max-w-lg mx-auto">
+            {feedItems.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-500 text-sm mb-4">Your feed is empty</p>
+                <p className="text-gray-400 text-xs">Scan a fish, find spots, or check analytics to get started!</p>
               </div>
+            ) : (
+              feedItems.map((item) => (
+                <FeedItem key={item.id} item={item} />
+              ))
             )}
           </div>
         )}
 
-        {activeTab === "map" && <FishingMap />}
-
-        {activeTab === "safety" && (
-          <SafetyGuide species={scannedFish?.species} />
+        {activeTab === "scan" && (
+          <div className="max-w-lg mx-auto">
+            <FishScannerPost onScanComplete={saveToFeed} />
+          </div>
         )}
-      </div>
 
-      {/* Footer */}
-      <footer className="bg-black bg-opacity-50 border-t border-blue-400 mt-16 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center text-blue-300 text-sm">
-          <p>GoFish © 2026 - Your AI-Powered Fishing Assistant</p>
-          <p className="mt-2">Fish Scanner • Spot Finder • Safety Guide • Community</p>
+        {activeTab === "spots" && (
+          <div className="max-w-lg mx-auto">
+            <BestSpotsPost onSpotFound={saveToFeed} />
+          </div>
+        )}
+
+        {activeTab === "brain" && (
+          <div className="max-w-lg mx-auto">
+            <MoorchehBrainPost species={scannedSpecies || undefined} onAnalysisComplete={saveToFeed} />
+          </div>
+        )}
+
+        {activeTab === "users" && (
+          <div className="max-w-lg mx-auto">
+            <ActiveUsersPost />
+          </div>
+        )}
+      </main>
+
+      {/* Bottom Navigation Bar (Instagram-style) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 z-50">
+        <div className="max-w-lg mx-auto px-2 py-2 flex items-center justify-around">
+          <button
+            onClick={() => setActiveTab("feed")}
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition ${
+              activeTab === "feed" ? "text-black" : "text-gray-400"
+            }`}
+          >
+            <Home className={`w-5 h-5 ${activeTab === "feed" ? "fill-current" : ""}`} />
+            <span className="text-xs font-medium">Feed</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("spots")}
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition ${
+              activeTab === "spots" ? "text-black" : "text-gray-400"
+            }`}
+          >
+            <MapPin className={`w-5 h-5 ${activeTab === "spots" ? "fill-current" : ""}`} />
+            <span className="text-xs font-medium">Spots</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("scan")}
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition ${
+              activeTab === "scan" ? "text-black" : "text-gray-400"
+            }`}
+          >
+            <Camera className={`w-5 h-5 ${activeTab === "scan" ? "fill-current" : ""}`} />
+            <span className="text-xs font-medium">Scan</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("brain")}
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition ${
+              activeTab === "brain" ? "text-black" : "text-gray-400"
+            }`}
+          >
+            <Brain className={`w-5 h-5 ${activeTab === "brain" ? "fill-current" : ""}`} />
+            <span className="text-xs font-medium">Brain</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition ${
+              activeTab === "users" ? "text-black" : "text-gray-400"
+            }`}
+          >
+            <Users className={`w-5 h-5 ${activeTab === "users" ? "fill-current" : ""}`} />
+            <span className="text-xs font-medium">Users</span>
+          </button>
         </div>
-      </footer>
-    </main>
+      </nav>
+
+      {/* Create Post Modal */}
+      {showCreatePost && (
+        <CreatePost
+          onPostCreated={saveToFeed}
+          onClose={() => setShowCreatePost(false)}
+        />
+      )}
+    </div>
   );
 }

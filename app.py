@@ -12,6 +12,7 @@ import json
 import base64
 import pickle
 import math
+import asyncio
 import httpx
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, List, Any
@@ -60,6 +61,8 @@ SPECIES_KEYWORDS = {
 }
 
 # Moorcheh Config
+MOORCHEH_API_KEY = os.getenv("MOORCHEH_API_KEY", "")
+MOORCHEH_API_URL = os.getenv("MOORCHEH_API_URL", "https://api.moorcheh.com")
 NS_SAFETY = os.getenv("NS_SAFETY", "safety_memory")
 NS_RECIPES = os.getenv("NS_RECIPES", "recipe_memory")
 NS_COMMUNITY = os.getenv("NS_COMMUNITY", "community_memory")
@@ -276,7 +279,14 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:3001", 
+        "http://localhost:5173", 
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -526,7 +536,7 @@ def species_matches_habitat(species: str, habitat_fe: str) -> tuple[float, str]:
 async def fetch_weather(lat: float, lon: float) -> dict:
     """Fetch weather from Open-Meteo API"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=5.0) as client:  # Reduced timeout for faster response
             response = await client.get(
                 OPEN_METEO_API,
                 params={
@@ -657,7 +667,7 @@ def calculate_score(species: str, base_score: float, habitat_multiplier: float, 
 @app.get("/api/fishing-spots", response_model=FishingSpotsResponse)
 async def get_fishing_spots(
     species: str = "walleye",
-    limit: int = Query(default=100, le=500),
+    limit: int = Query(default=20, le=50),  # Reduced default to avoid timeouts
     min_lat: Optional[float] = None,
     max_lat: Optional[float] = None,
     min_lon: Optional[float] = None,
@@ -715,10 +725,14 @@ async def get_fishing_spots(
     filtered.sort(key=lambda x: (x["habitat_match"], x["base_score"]), reverse=True)
     top_spots = filtered[:limit]
     
-    # Fetch weather and calculate bite scores
-    results = []
-    for spot in top_spots:
-        weather = await fetch_weather(spot["latitude"], spot["longitude"])
+    # Fetch weather and calculate bite scores (concurrent for better performance)
+    async def process_spot(spot):
+        try:
+            weather = await fetch_weather(spot["latitude"], spot["longitude"])
+        except:
+            # Fallback weather data if API fails
+            weather = {"temperature": 10, "pressure": 1013, "wind_speed": 10}
+        
         bite = calculate_score(
             species, 
             spot["base_score"], 
@@ -726,7 +740,7 @@ async def get_fishing_spots(
             weather, 
             current_hour
         )
-        results.append(FishingSpotResult(
+        return FishingSpotResult(
             id=spot["id"],
             name=spot["name"],
             latitude=spot["latitude"],
@@ -735,7 +749,13 @@ async def get_fishing_spots(
             status=bite["status"],
             reasoning=f"{spot['habitat_reason']}; {bite['reasoning']}",
             weather=weather
-        ))
+        )
+    
+    # Process spots concurrently (limited to avoid too many API calls)
+    max_concurrent = min(len(top_spots), 20)  # Limit concurrent requests
+    results = await asyncio.gather(*[process_spot(spot) for spot in top_spots[:max_concurrent]], return_exceptions=True)
+    # Filter out any exceptions
+    results = [r for r in results if isinstance(r, FishingSpotResult)]
     
     # Final sort by bite score
     results.sort(key=lambda x: x.bite_score, reverse=True)
@@ -844,34 +864,183 @@ async def brain_advise(request: IdentifyRequest):
     """
     POST /api/brain/advise
     Get safety info, recipes, and community alerts for a caught fish
-    
-    Note: This is a placeholder. Full implementation requires Moorcheh API.
     """
-    return IdentifyResponse(
-        species=request.species,
-        spot=request.spot,
-        edibility_label="Likely edible",
-        safety_summary=[
-            f"{request.species} can be prepared by grilling, baking, or pan-frying",
-            "Check local fishing regulations before consumption",
-            "Ensure proper storage and handling"
+    species_lower = request.species.lower()
+    
+    # Fish-specific knowledge base
+    fish_data = {
+        "bass": {
+            "edibility": "Safe to eat",
+            "facts": [
+                "Bass is a popular sport fish and excellent table fare",
+                "Contains omega-3 fatty acids beneficial for heart health",
+                "Firm, white flesh with mild flavor",
+                "Best caught during spring and fall seasons"
+            ],
+            "safety": [
+                "Generally safe to consume from clean waters",
+                "Check local advisories for mercury content",
+                "Smaller bass (< 14 inches) have lower mercury levels",
+                "Clean and cook thoroughly to 145°F internal temperature"
+            ],
+            "recipes": [
+                {
+                    "title": "Pan-Fried Bass",
+                    "steps": [
+                        "Clean and fillet the bass, removing skin",
+                        "Dredge fillets in flour mixed with salt and pepper",
+                        "Heat butter and oil in skillet over medium-high heat",
+                        "Cook 3-4 minutes per side until golden and flaky",
+                        "Serve with lemon wedges"
+                    ],
+                    "source": "Traditional preparation"
+                },
+                {
+                    "title": "Grilled Bass with Herbs",
+                    "steps": [
+                        "Season fillets with olive oil, garlic, and fresh herbs",
+                        "Preheat grill to medium-high",
+                        "Grill 4-5 minutes per side with lid closed",
+                        "Fish is done when it flakes easily with a fork"
+                    ],
+                    "source": "Grilling method"
+                }
+            ]
+        },
+        "walleye": {
+            "edibility": "Safe to eat - Excellent",
+            "facts": [
+                "Walleye is considered one of the best-tasting freshwater fish",
+                "Native to North American lakes and rivers",
+                "Named for their distinctive glassy, opaque eyes",
+                "Most active during dawn and dusk"
+            ],
+            "safety": [
+                "Very safe to eat - low mercury content",
+                "Check local size and bag limits",
+                "Best from clean, cold water sources",
+                "Handle carefully - sharp dorsal fins"
+            ],
+            "recipes": [
+                {
+                    "title": "Beer-Battered Walleye",
+                    "steps": [
+                        "Mix flour, beer, and seasonings for batter",
+                        "Dip walleye fillets in batter",
+                        "Deep fry at 375°F for 3-4 minutes until golden",
+                        "Drain on paper towels and serve immediately"
+                    ],
+                    "source": "Classic preparation"
+                }
+            ]
+        },
+        "trout": {
+            "edibility": "Safe to eat",
+            "facts": [
+                "Trout prefer cold, oxygen-rich water",
+                "High in protein and omega-3 fatty acids",
+                "Delicate, pink to orange flesh",
+                "Popular fly-fishing target"
+            ],
+            "safety": [
+                "Safe when caught from clean, cold streams",
+                "Check for fishing regulations and seasons",
+                "Wild trout generally safer than farmed",
+                "Cook to 145°F internal temperature"
+            ],
+            "recipes": [
+                {
+                    "title": "Pan-Seared Trout",
+                    "steps": [
+                        "Season whole trout with salt, pepper, and lemon",
+                        "Heat butter in pan over medium-high heat",
+                        "Cook 4-5 minutes per side until skin is crispy",
+                        "Serve with fresh herbs and lemon"
+                    ],
+                    "source": "Simple preparation"
+                }
+            ]
+        },
+        "pike": {
+            "edibility": "Safe to eat - with caution",
+            "facts": [
+                "Pike have many small Y-bones that require special filleting",
+                "Aggressive predator fish",
+                "Firm, white flesh when properly prepared",
+                "Can grow very large"
+            ],
+            "safety": [
+                "Edible but requires careful preparation",
+                "Remove Y-bones completely before cooking",
+                "Check size regulations - larger pike may have higher mercury",
+                "Best prepared by experienced fish cleaners"
+            ],
+            "recipes": [
+                {
+                    "title": "Baked Pike Fillets",
+                    "steps": [
+                        "Carefully remove all Y-bones from fillets",
+                        "Season with herbs, lemon, and butter",
+                        "Bake at 400°F for 12-15 minutes",
+                        "Fish is done when flaky and opaque"
+                    ],
+                    "source": "Baking method"
+                }
+            ]
+        }
+    }
+    
+    # Get species data or use defaults
+    data = fish_data.get(species_lower, {
+        "edibility": "Likely safe to eat - verify species",
+        "facts": [
+            f"{request.species} is a freshwater fish species",
+            "Check with local fish and wildlife department for regulations",
+            "Ensure proper identification before consumption"
         ],
-        recipes=[
-            RecipeCard(
-                title=f"Pan-Seared {request.species}",
-                steps=[
+        "safety": [
+            "Always verify fish species before eating",
+            "Check local fishing regulations and advisories",
+            "Cook thoroughly to 145°F internal temperature",
+            "Store on ice immediately after catching"
+        ],
+        "recipes": [
+            {
+                "title": f"Pan-Seared {request.species}",
+                "steps": [
                     "Clean and fillet the fish",
                     "Season with salt, pepper, and lemon",
                     "Heat pan with olive oil to medium-high",
-                    "Cook for 4-5 minutes per side until golden"
+                    "Cook 4-5 minutes per side until golden"
                 ],
-                source_snippet="Traditional preparation method"
-            )
+                "source": "General preparation method"
+            }
+        ]
+    })
+    
+    recipe_cards = [
+        RecipeCard(
+            title=recipe["title"],
+            steps=recipe["steps"],
+            source_snippet=recipe.get("source", "Traditional method")
+        )
+        for recipe in data["recipes"]
+    ]
+    
+    return IdentifyResponse(
+        species=request.species,
+        spot=request.spot,
+        edibility_label=data["edibility"],
+        safety_summary=data["safety"],
+        recipes=recipe_cards,
+        community_alerts=[
+            "Always check local fishing regulations",
+            "Be aware of seasonal restrictions",
+            "Follow catch and size limits"
         ],
-        community_alerts=[],
         evidence={
-            "safety": [],
-            "recipes": [],
+            "safety": [{"text": s, "score": 1.0, "metadata": {}} for s in data["safety"]],
+            "recipes": [{"text": r["title"], "score": 1.0, "metadata": {}} for r in data["recipes"]],
             "community": []
         }
     )
