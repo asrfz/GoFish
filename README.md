@@ -333,7 +333,7 @@ Response:
 ### MongoDB Collections
 
 **fish_reference**
-- Stores reference fish data with embeddings
+- Stores reference fish data with embeddings 
 - Used for vector similarity search
 - ~250 species baseline
 
