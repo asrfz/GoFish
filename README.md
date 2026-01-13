@@ -44,7 +44,7 @@ GoFish/
 │   │       ├── FishingMap.tsx     # Spots finder UI
 │   │       └── SafetyGuide.tsx    # Safety & recipes UI
 │   └── package.json
-└── Moorcheh/                       # Brain API (optional)
+└── Moorcheh/                       # Brain API
 ```
 
 ## Installation
