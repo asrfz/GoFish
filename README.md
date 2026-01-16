@@ -2,6 +2,7 @@
 
 **AI-Powered Fish Identification, Location Finding, and Safety Guide**
 
+Demo Video: https://www.youtube.com/watch?v=4fE4-DNuJDM
 ## Features
 
 ### 🎥 Fish Scanner
